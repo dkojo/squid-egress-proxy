@@ -44,7 +44,7 @@ except requests.exceptions.ProxyError as e:
   ha)
     docker stop squid1 >/dev/null
     sleep 3
-    w "pip download --quiet --root-user-action=ignore --disable-pip-version-check --no-cache-dir --no-deps -d /tmp/ha idna==3.10 && echo 'With squid1 down: pip still downloads from pypi.org through squid2'"
+    w "pip download --quiet --disable-pip-version-check --no-cache-dir --no-deps -d /tmp/ha idna==3.10 && echo 'With squid1 down: pip still downloads from pypi.org through squid2'"
     docker start squid1 >/dev/null
     echo "PASS  egress survives losing a proxy"
     ;;
