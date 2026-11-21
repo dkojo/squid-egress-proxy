@@ -1,0 +1,37 @@
+# A private network with no route to the internet, and the only way out: two Squid proxies behind HAProxy.
+services:
+  squid1:
+    build: ./squid
+    container_name: squid1
+    networks: [private, public]
+  squid2:
+    build: ./squid
+    container_name: squid2
+    networks: [private, public]
+
+  # The workloads' single proxy address
+  egress:
+    image: haproxy:3.0.31-alpine
+    container_name: egress
+    volumes: ["./haproxy:/usr/local/etc/haproxy:ro"]
+    networks: [private]
+    depends_on: [squid1, squid2]
+
+  # A workload in the private subnet: it can only reach the proxies
+  workload:
+    image: python:3.13-alpine
+    container_name: workload
+    command: ["sleep", "infinity"]
+    networks: [private]
+    environment:
+      HTTP_PROXY: http://egress:3128
+      HTTPS_PROXY: http://egress:3128
+      http_proxy: http://egress:3128
+      https_proxy: http://egress:3128
+
+networks:
+  private:
+    internal: true          # no gateway: nothing on this network can reach the internet directly
+    ipam:
+      config: [{ subnet: 172.30.0.0/16 }]
+  public: {}

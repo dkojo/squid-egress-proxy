@@ -1,0 +1,51 @@
+name: egress
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  egress:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the Squid proxies
+        run: docker compose build -q
+
+      - name: Start the private network and proxies
+        run: |
+          docker compose up -d
+          for i in $(seq 1 30); do
+            docker exec egress true 2>/dev/null && [ "$(docker inspect -f '{{.State.Health.Status}}' squid1)" = healthy ] && [ "$(docker inspect -f '{{.State.Health.Status}}' squid2)" = healthy ] && break
+            sleep 2
+          done
+          docker compose ps
+
+      - name: No direct internet check
+        run: bash scripts/checks.sh direct
+
+      - name: "Allowed: package installs"
+        run: bash scripts/checks.sh allowed
+
+      - name: "Blocked: everything else"
+        run: bash scripts/checks.sh blocked
+
+      - name: High availability check
+        run: bash scripts/checks.sh ha
+
+      - name: Egress audit
+        run: bash scripts/checks.sh audit
+
+      - name: Show the proxies on failure
+        if: failure()
+        run: docker compose ps; docker compose logs --tail 40

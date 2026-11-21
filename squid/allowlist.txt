@@ -1,0 +1,5 @@
+# Package repositories the private workloads may reach. A leading dot also allows subdomains.
+.pypi.org
+.pythonhosted.org
+dl-cdn.alpinelinux.org
+deb.debian.org
